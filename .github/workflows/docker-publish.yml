@@ -8,45 +8,43 @@ on:
     branches: [ "main" ]
 
 env:
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/mi-react-app
-  # Si el Dockerfile no está en raíz, cambia context/file:
+  # forma el nombre del repo UNA sola vez
+  DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/mi-react-app
   BUILD_CONTEXT: .
   DOCKERFILE: ./Dockerfile
 
 jobs:
   docker:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU (multi-arch)
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Extract Docker metadata (tags, labels)
+      - name: Show target repo (sanity check)
+        run: echo "Target image: docker.io/${{ env.DOCKERHUB_REPO }}"
+
+      - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: docker.io/${{ env.IMAGE_NAME }}
+          images: docker.io/${{ env.DOCKERHUB_REPO }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=long
             type=ref,event=tag
-          labels: |
-            org.opencontainers.image.title=mi-react-app
-            org.opencontainers.image.source=${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Docker login (Docker Hub)
         uses: docker/login-action@v3
         with:
           registry: docker.io
-          username: ${{ secrets.DOCKER_USERNAME}}
-          password: ${{ secrets.DOCKER_PASSWORD}}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build & Push
         uses: docker/build-push-action@v6
